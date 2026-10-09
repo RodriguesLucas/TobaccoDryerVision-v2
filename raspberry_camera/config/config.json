@@ -1,0 +1,28 @@
+{
+  "photo_interval": 1800,
+  "capture_timeout": 15,
+  "light_settle_seconds": 2,
+  "led_count": 16,
+  "led_brightness": 0.3,
+  "led_rgb": [
+    255,
+    255,
+    255
+  ],
+  "photo_directory": "/home/rodrigueslucas/Pictures/images/low",
+  "camera_width": 640,
+  "camera_height": 480,
+  "photo_format": "bmp",
+  "camera_settle_seconds": 2,
+  "camera_controls": {
+    "AeEnable": false,
+    "AwbEnable": false,
+    "ExposureTime": 4000,
+    "ColourGains": [
+      1.15,
+      1.0
+    ]
+  },
+  "relay_active_low": true,
+  "sample_interval": 2
+}

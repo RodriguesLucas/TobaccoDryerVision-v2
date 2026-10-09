@@ -1,0 +1,5 @@
+adafruit-blinka
+adafruit-circuitpython-neopixel
+rpi-ws281x
+smbus2
+gpiozero
