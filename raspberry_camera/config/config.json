@@ -1,7 +1,7 @@
 {
   "photo_interval": 1800,
   "capture_timeout": 15,
-  "light_settle_seconds": 2,
+  "light_settle_seconds": 0.5,
   "led_count": 16,
   "led_brightness": 0.3,
   "led_rgb": [
@@ -13,7 +13,7 @@
   "camera_width": 640,
   "camera_height": 480,
   "photo_format": "bmp",
-  "camera_settle_seconds": 2,
+  "camera_settle_seconds": 1,
   "camera_controls": {
     "AeEnable": false,
     "AwbEnable": false,
