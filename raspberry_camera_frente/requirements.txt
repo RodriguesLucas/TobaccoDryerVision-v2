@@ -1,3 +1,0 @@
-smbus2
-adafruit-circuitpython-neopixel
-rpi-ws281x
