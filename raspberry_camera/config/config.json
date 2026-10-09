@@ -9,7 +9,7 @@
     255,
     255
   ],
-  "photo_directory": "/home/rodrigueslucas/Pictures/images/low",
+  "photo_directory": "/home/rodrigueslucas/Desktop/TobaccoDryerVision-v2/raspberry_camera/data/photos",
   "camera_width": 640,
   "camera_height": 480,
   "photo_format": "bmp",
