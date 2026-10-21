@@ -8,6 +8,7 @@ import threading
 
 from src.camera.photo_worker import capture_photos
 from src.control.hardware import CameraHardware
+from src.storage.sensor_log import append_sensor_log
 
 
 def load_configuration(project_root):
@@ -26,9 +27,10 @@ def monitor_sensor(hardware, config, simulation, stop_event):
             sample = {'temperature_c': 30.0, 'humidity': 80.0} if simulation else hardware.sensor.read()
             temperature_c = sample['temperature_c']
             temperature_f = temperature_c * 1.8 + 32
+            append_sensor_log(config, sample, simulation=simulation)
             print(f"SHT20: {temperature_c:.2f} °C / {temperature_f:.2f} °F | Umidade: {sample['humidity']:.2f}%", flush=True)
         except Exception as error:
-            print(f'Falha no SHT20: {type(error).__name__}: {error}', flush=True)
+            print(f'Falha no SHT20 ou no registro: {type(error).__name__}: {error}', flush=True)
         stop_event.wait(config['sample_interval'])
 
 

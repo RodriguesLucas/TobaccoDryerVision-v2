@@ -35,3 +35,15 @@ Ctrl+C solicita a parada. Se houver uma captura em andamento, ela termina ou ati
 ## Dependências
 
 Picamera2 instalado pelo sistema; bibliotecas do LED, gpiozero e smbus2. O I²C precisa estar habilitado para abrir o SHT20. A lista Python está em requirements.txt.
+
+## Histórico de temperatura e umidade (independente das fotos)
+
+As medições do SHT20 são gravadas a cada `sample_interval` segundos (padrão: 2) em arquivos diários JSON Lines: `data/sensor_logs/leituras_YYYY-MM-DD.jsonl`. Cada linha tem `timestamp` com fuso horário de São Paulo, `sensor`, `temperature_c`, `temperature_f` e `humidity`. Isso permite cruzar as medições pelo horário com os registros do outro Raspberry, sem qualquer associação às fotos. O arquivo é aberto em modo de acréscimo e não apaga registros anteriores. A simulação grava separadamente em `data/sensor_logs/simulation/`.
+
+Exemplo de linha:
+
+```json
+{"timestamp":"2026-10-21T13:50:00.000000-03:00","sensor":"SHT20","temperature_c":32.5,"temperature_f":90.5,"humidity":78.2}
+```
+
+O intervalo e a pasta podem ser ajustados no `config/config.json` (`sample_interval`, `sensor_log_directory` e `log_timezone`). O relógio de ambos os Raspberry Pi deve estar sincronizado para comparar as leituras.
