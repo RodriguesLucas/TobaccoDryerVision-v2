@@ -1,4 +1,4 @@
-"""Inicializa o LED, o SHT20 e o relé 1 deste Raspberry."""
+"""Inicializa o LED, os sensores SHT20/SHT41 e o relé 1 deste Raspberry."""
 
 
 class CameraHardware:
@@ -7,7 +7,7 @@ class CameraHardware:
     def __init__(self, config, simulation):
         """Cria o anel LED apagado; a simulação não acessa o hardware."""
         self.pixels = None
-        self.sensor = None
+        self.sensors = {}
         self.power_relay = None
         if simulation:
             return
@@ -16,10 +16,12 @@ class CameraHardware:
             import neopixel
             from gpiozero import OutputDevice
             from src.sensors.sht20 import SHT20
+            from src.sensors.sht41 import SHT41
 
             # O relé começa desligado. Apenas o GPIO 19 é utilizado.
             self.power_relay = OutputDevice(19, active_high=not config['relay_active_low'], initial_value=False)
-            self.sensor = SHT20()
+            self.sensors['SHT20'] = SHT20()
+            self.sensors['SHT41'] = SHT41(address=config.get('sht41_address', 0x44))
 
             self.pixels = neopixel.NeoPixel(
                 board.D18,
@@ -57,8 +59,13 @@ class CameraHardware:
                         self.pixels.deinit()
             finally:
                 try:
-                    if self.sensor is not None and close_sensor:
-                        self.sensor.close()
+                    if close_sensor:
+                        try:
+                            if 'SHT41' in self.sensors:
+                                self.sensors['SHT41'].close()
+                        finally:
+                            if 'SHT20' in self.sensors:
+                                self.sensors['SHT20'].close()
                 finally:
                     if self.power_relay is not None:
                         self.power_relay.close()

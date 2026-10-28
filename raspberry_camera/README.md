@@ -1,8 +1,18 @@
-# Raspberry: câmera, LED, SHT20 e relé
+# Raspberry: câmera, LED, SHT20, SHT41 e relé
 
 O relé 1 (GPIO 19) liga após a inicialização dos recursos e permanece ligado enquanto o programa roda. Ao encerrar com Ctrl+C, SIGTERM ou uma exceção que desenrole a execução, ele é desligado no bloco finally. O relé 2 (GPIO 26) não é inicializado. Não há consulta ao outro Raspberry.
 
-O SHT20 usa I²C 1, endereço 0x40, GPIO 2 (SDA) e GPIO 3 (SCL). Mostra temperatura em °C/°F e umidade a cada 2 segundos. Uma falha de leitura é exibida no terminal; ela não altera o relé. A temperatura e a umidade não controlam o aquecimento nesta versão.
+O SHT20 usa I²C 1, endereço 0x40; o SHT41 usa o mesmo barramento, endereço padrão 0x44. Ambos compartilham GPIO 2 (SDA), GPIO 3 (SCL), alimentação compatível com os módulos e GND. Confirme a tensão suportada pelo módulo/cápsula antes de ligar. Mostra temperatura em °C/°F e umidade dos dois sensores a cada 1 segundo. Uma falha em um sensor é exibida sem impedir a leitura do outro e não altera o relé. A temperatura e a umidade não controlam o aquecimento nesta versão.
+
+## API para o outro Raspberry Pi
+
+Enquanto o programa estiver em execução, ele disponibiliza a leitura mais recente em `http://<IP-DESTE-RASPBERRY>:8000/api/sensors`. O outro Raspberry deve estar na mesma rede e consultar esse endereço; não é necessário instalar dependência Python adicional. Exemplo:
+
+```bash
+curl http://<IP-DESTE-RASPBERRY>:8000/api/sensors
+```
+
+O retorno JSON contém `SHT20` e `SHT41`, cada um com estado, horário, temperatura em °C/°F e umidade relativa. Em caso de falha, `status` passa a `error`, o campo `error` informa a falha e a última medição válida, se houver, permanece disponível. A interface escuta em todas as interfaces de rede; ajuste `sensor_api_host` e `sensor_api_port` em `config/config.json` se necessário. `sht41_address` aceita o endereço I²C decimal (padrão 68, isto é, `0x44`).
 
 ## Execução
 
@@ -38,7 +48,7 @@ Picamera2 instalado pelo sistema; bibliotecas do LED, gpiozero e smbus2. O I²C 
 
 ## Histórico de temperatura e umidade (independente das fotos)
 
-As medições do SHT20 são gravadas a cada `sample_interval` segundos (padrão: 2) em arquivos diários JSON Lines: `data/sensor_logs/leituras_YYYY-MM-DD.jsonl`. Cada linha tem `timestamp` com fuso horário de São Paulo, `sensor`, `temperature_c`, `temperature_f` e `humidity`. Isso permite cruzar as medições pelo horário com os registros do outro Raspberry, sem qualquer associação às fotos. O arquivo é aberto em modo de acréscimo e não apaga registros anteriores. A simulação grava separadamente em `data/sensor_logs/simulation/`.
+As medições de ambos os sensores são gravadas a cada `sample_interval` segundos (padrão: 1) em arquivos diários JSON Lines: `data/sensor_logs/leituras_YYYY-MM-DD.jsonl`. Cada linha tem `timestamp` com fuso horário de São Paulo, `sensor`, `temperature_c`, `temperature_f` e `humidity`. O outro Raspberry pode consultar a API HTTP uma vez por segundo para obter as leituras recentes. O arquivo é aberto em modo de acréscimo e não apaga registros anteriores. A simulação grava separadamente em `data/sensor_logs/simulation/`.
 
 Exemplo de linha:
 
