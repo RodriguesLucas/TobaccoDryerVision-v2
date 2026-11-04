@@ -32,6 +32,49 @@ Simulação sem hardware:
 python3 run_camera.py --simulate --once
 ```
 
+## Início automático ao ligar o Raspberry Pi
+
+O serviço `tobacco-camera` inicia o programa durante o boot e tenta reiniciá-lo 5 segundos após uma falha. Para configurá-lo uma vez no Raspberry Pi, crie o arquivo de serviço:
+
+```bash
+sudo tee /etc/systemd/system/tobacco-camera.service > /dev/null <<'EOF'
+[Unit]
+Description=TobaccoDryerVision - camera, sensores e rele
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/home/rodrigueslucas/Desktop/TobaccoDryerVision-v2/raspberry_camera
+ExecStart=/usr/bin/python3 run_camera.py
+Restart=always
+RestartSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now tobacco-camera
+```
+
+O caminho em `WorkingDirectory` deve corresponder à pasta do projeto no Raspberry Pi. `systemctl status` apenas consulta o estado e pode ser executado quando quiser verificar o serviço; pressione `q` para sair da tela:
+
+```bash
+systemctl status tobacco-camera
+```
+
+Para acompanhar os registros ou parar o serviço:
+
+```bash
+journalctl -u tobacco-camera -f
+sudo systemctl stop tobacco-camera
+```
+
+O serviço já está habilitado para iniciar automaticamente nos próximos boots. Opcionalmente, reinicie o Raspberry Pi e consulte `systemctl status tobacco-camera` para confirmar que voltou a ficar ativo. Com o serviço ativo, pare-o antes de executar `run_camera.py` manualmente, pois os dois disputariam GPIO, câmera e porta da API. `stop` encerra o programa até o próximo boot; para não iniciar mais no boot, use `sudo systemctl disable tobacco-camera`.
+
+Ao voltar a energia, o relé 1 liga sozinho, sem ninguém presente, e a resistência volta a aquecer. A proteção térmica independente é indispensável. Sem RTC com bateria e sem internet, o relógio do Raspberry pode ficar atrasado após a queda, afetando os horários de fotos e registros até sincronizar.
+
 ## Fotos e configuração
 
 LED NeoPixel de 16 pixels no GPIO 18. Liga, aguarda 2 segundos, inicia a câmera CSI, aguarda mais 2 segundos, captura e apaga o LED. Foto BMP de 640 × 480 com exposição de 4000 µs e ColourGains (1.15, 1.0). Repete 30 minutos após cada captura. Destino: `/home/rodrigueslucas/Pictures/images/low/`.
@@ -40,7 +83,7 @@ Os ajustes ficam em `config/config.json`. `relay_active_low: true` significa LOW
 
 ## Encerramento e limite
 
-Ctrl+C solicita a parada. Se houver uma captura em andamento, ela termina ou atinge o timeout de 15 segundos antes do encerramento. Desligamento forçado (kill -9), falta de energia ou travamento do sistema não executam finally; o estado físico do relé depende do circuito. Como a fonte alimenta ventoinha e resistência juntas continuamente, use proteção térmica independente.
+Ctrl+C ou `systemctl stop` solicitam a parada. Se houver uma captura em andamento, ela termina ou atinge o timeout de 15 segundos antes do encerramento. Desligamento forçado (kill -9), falta de energia ou travamento do sistema não executam finally; o estado físico do relé depende do circuito. Como a fonte alimenta ventoinha e resistência juntas continuamente, use proteção térmica independente.
 
 ## Dependências
 
