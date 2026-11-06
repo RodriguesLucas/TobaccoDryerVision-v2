@@ -1,5 +1,5 @@
 {
-  "photo_interval": 1800,
+  "photo_interval": 900,
   "capture_timeout": 15,
   "light_settle_seconds": 0.5,
   "led_count": 16,
@@ -29,5 +29,14 @@
   "sensor_api_host": "0.0.0.0",
   "sensor_api_port": 8000,
   "sensor_log_directory": "data/sensor_logs",
-  "log_timezone": "America/Sao_Paulo"
+  "log_timezone": "America/Sao_Paulo",
+  "talo_analysis": {
+    "enabled": true,
+    "directory": "data/talo",
+    "comparison_hours": 6,
+    "tolerance_minutes": 40,
+    "timeout": 600,
+    "threads": 2,
+    "model_paths": []
+  }
 }

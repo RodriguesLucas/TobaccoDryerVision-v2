@@ -1,9 +1,11 @@
 """Executa a iluminação e a captura periódica das fotografias."""
 
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 
 def capture_photos(project_root, config, simulation, hardware, stop_event, photo_queue=None, once=False):
@@ -47,9 +49,44 @@ def capture_photos(project_root, config, simulation, hardware, stop_event, photo
         finally:
             hardware.set_light(False)
 
+        analysis_started = time.monotonic()
+        if event['ok'] and not simulation and config.get('talo_analysis', {}).get('enabled', False):
+            run_talo_analysis(project_root, photo_path, config, stop_event)
         if photo_queue is not None:
             photo_queue.put(event)
         if once:
             break
         print(f'LED desligado. Próxima captura em {config["photo_interval"]} segundos.', flush=True)
-        stop_event.wait(config['photo_interval'])
+        # O tempo da análise conta dentro do intervalo, para manter as fotos no photo_interval (15 min).
+        stop_event.wait(max(0.0, config['photo_interval'] - (time.monotonic() - analysis_started)))
+
+
+def run_talo_analysis(project_root, photo_path, config, stop_event):
+    """Analisa a foto em subprocesso com prioridade baixa; falha ou timeout não param as fotos.
+
+    O resultado vai para data/talo/ultima_talo.json, servido em GET /api/talo.
+    """
+    timeout = config['talo_analysis'].get('timeout', 600)
+    threads = str(config['talo_analysis'].get('threads', 2))
+    environment = {**os.environ, 'OMP_NUM_THREADS': threads, 'MKL_NUM_THREADS': threads}
+    command = [sys.executable, '-m', 'src.talo.analise', str(photo_path), str(project_root / 'config/config.json')]
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=project_root,
+            env=environment,
+            stdout=subprocess.DEVNULL,
+            preexec_fn=(lambda: os.nice(10)) if os.name == 'posix' else None,
+        )
+    except Exception as error:
+        print(f'Falha ao iniciar a análise do talo: {type(error).__name__}: {error}', flush=True)
+        return
+    deadline = time.monotonic() + timeout
+    # Espera em passos curtos para encerrar logo quando o serviço for parado.
+    while process.poll() is None:
+        if stop_event.wait(1) or time.monotonic() > deadline:
+            process.kill()
+            process.wait()
+            print('Análise do talo interrompida (encerramento ou tempo limite).', flush=True)
+            return
+    print(f'Análise do talo concluída (código {process.returncode}).', flush=True)

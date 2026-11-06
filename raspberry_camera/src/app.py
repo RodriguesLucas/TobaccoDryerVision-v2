@@ -13,6 +13,7 @@ from src.camera.photo_worker import capture_photos
 from src.api.sensor_server import SensorHTTPServer, SensorReadingStore
 from src.control.hardware import CameraHardware
 from src.storage.sensor_log import append_sensor_log
+from src.talo.analise import pasta_resultados
 
 
 def load_configuration(project_root):
@@ -77,10 +78,14 @@ def main():
         hardware = CameraHardware(config, arguments.simulate)
         hardware.set_power(True)
         print('Relé 1 ligado durante a execução.' if not arguments.simulate else 'SIMULAÇÃO: relé 1 ligado virtualmente.', flush=True)
+        talo_path = None
+        if config.get('talo_analysis', {}).get('enabled', False):
+            talo_path = pasta_resultados(project_root, config) / 'ultima_talo.json'
         sensor_server = SensorHTTPServer(
             reading_store,
             host=config.get('sensor_api_host', '0.0.0.0'),
             port=config.get('sensor_api_port', 8000),
+            talo_path=talo_path,
         )
         sensor_server.start()
         print(

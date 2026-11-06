@@ -1,6 +1,6 @@
 # Raspberry: câmera, LED, SHT20, SHT41 e relé
 
-O relé 1 (GPIO 19) liga após a inicialização dos recursos e permanece ligado enquanto o programa roda. Ao encerrar com Ctrl+C, SIGTERM ou uma exceção que desenrole a execução, ele é desligado no bloco finally. O relé 2 (GPIO 26) não é inicializado. Não há consulta ao outro Raspberry.
+O relé 1 (GPIO 19) liga após a inicialização dos recursos e permanece ligado enquanto o programa roda. Ao encerrar com Ctrl+C, SIGTERM ou uma exceção que desenrole a execução, ele é desligado no bloco finally. O relé 2 (GPIO 26) não é inicializado. Este Raspberry não consulta o outro; é o outro que consulta a API daqui.
 
 O SHT20 usa I²C 1, endereço 0x40; o SHT41 usa o mesmo barramento, endereço padrão 0x44. Ambos compartilham GPIO 2 (SDA), GPIO 3 (SCL), alimentação compatível com os módulos e GND. Confirme a tensão suportada pelo módulo/cápsula antes de ligar. Mostra temperatura em °C/°F e umidade dos dois sensores a cada 1 segundo. Uma falha em um sensor é exibida sem impedir a leitura do outro e não altera o relé. A temperatura e a umidade não controlam o aquecimento nesta versão.
 
@@ -13,6 +13,18 @@ curl http://<IP-DESTE-RASPBERRY>:8000/api/sensors
 ```
 
 O retorno JSON contém `SHT20` e `SHT41`, cada um com estado, horário, temperatura em °C/°F e umidade relativa. Em caso de falha, `status` passa a `error`, o campo `error` informa a falha e a última medição válida, se houver, permanece disponível. A interface escuta em todas as interfaces de rede; ajuste `sensor_api_host` e `sensor_api_port` em `config/config.json` se necessário. `sht41_address` aceita o endereço I²C decimal (padrão 68, isto é, `0x44`).
+
+## Análise do talo (`/api/talo`)
+
+Com `talo_analysis.enabled` em `config/config.json`, cada foto é analisada logo após a captura por `python3 -m src.talo.analise`, em subprocesso com prioridade baixa (`nice 10`) e tempo limite (`timeout`, 600 s). Falha ou demora na análise não param as fotos nem os sensores, e o tempo da análise conta dentro do intervalo de 15 min (`photo_interval` 900).
+
+A análise compara a foto com a de ~6 h antes (`comparison_hours`, tolerância `tolerance_minutes`) e grava `data/talo/ultima_talo.json` e `data/talo/historico_talo.jsonl`. O controlador da estufa (Raspberry 222) consulta:
+
+```bash
+curl http://<IP-DESTE-RASPBERRY>:8000/api/talo
+```
+
+Resposta: `foto`, `capturada_em` (UTC), `brilho`, `comparacao.mudanca` (diferença média de cor 0-255; perto de 2 quando o talo parou de mudar) e `modelo`. Sem análise ainda, responde 503 com `erro`. Só precisa do Pillow. Para classificar também com um modelo, instale o torch/torchvision e liste o `.pth` em `model_paths`; neste Pi 3B+ (906 MB) use um modelo leve, como `mobilenet_v3_large`. Detalhes: `docs/TALO_REMOTO.md` no TobaccoDryerVision-V3.
 
 ## Execução
 
@@ -77,7 +89,7 @@ Ao voltar a energia, o relé 1 liga sozinho, sem ninguém presente, e a resistê
 
 ## Fotos e configuração
 
-LED NeoPixel de 16 pixels no GPIO 18. Liga, aguarda 2 segundos, inicia a câmera CSI, aguarda mais 2 segundos, captura e apaga o LED. Foto BMP de 640 × 480 com exposição de 4000 µs e ColourGains (1.15, 1.0). Repete 30 minutos após cada captura. Destino: `/home/rodrigueslucas/Pictures/images/low/`.
+LED NeoPixel de 16 pixels no GPIO 18. Liga, aguarda 2 segundos, inicia a câmera CSI, aguarda mais 2 segundos, captura e apaga o LED. Foto BMP de 640 × 480 com exposição de 4000 µs e ColourGains (1.15, 1.0). Repete a cada 15 minutos (`photo_interval`). Destino: `/home/rodrigueslucas/Pictures/images/low/`.
 
 Os ajustes ficam em `config/config.json`. `relay_active_low: true` significa LOW liga e HIGH desliga, conforme o código de teste informado. Se a placa de dois relés usar a polaridade inversa, ajuste para false antes de ligar a carga.
 
