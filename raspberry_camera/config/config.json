@@ -37,6 +37,11 @@
     "tolerance_minutes": 40,
     "timeout": 600,
     "threads": 2,
-    "model_paths": []
+    "model_paths": [
+      "modelos/melhor_efficientnet_b0_tabaco.pth",
+      "modelos/melhor_efficientnet_v2_s_tabaco.pth",
+      "modelos/melhor_mobilenet_v3_large_tabaco.pth",
+      "modelos/melhor_regnet_y_800mf_tabaco.pth"
+    ]
   }
 }
