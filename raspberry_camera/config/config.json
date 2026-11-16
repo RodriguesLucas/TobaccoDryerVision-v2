@@ -38,10 +38,10 @@
     "timeout": 600,
     "threads": 2,
     "model_paths": [
-      "modelos/melhor_efficientnet_b0_tabaco.pth",
-      "modelos/melhor_efficientnet_v2_s_tabaco.pth",
-      "modelos/melhor_mobilenet_v3_large_tabaco.pth",
-      "modelos/melhor_regnet_y_800mf_tabaco.pth"
+      "modelos/melhor_mobilenet_v3_small_taloSecagem2.pth",
+      "modelos/melhor_mobilenet_v3_large_taloSecagem2.pth",
+      "modelos/melhor_efficientnet_b0_taloSecagem2.pth",
+      "modelos/melhor_efficientnet_v2_s_taloSecagem2.pth"
     ]
   }
 }
