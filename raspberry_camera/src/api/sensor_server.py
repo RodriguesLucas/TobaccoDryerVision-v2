@@ -4,6 +4,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import re
 import threading
+import time
+from urllib.parse import parse_qs, urlsplit
 
 # Só o nome gerado pela análise do talo: sem barras nem subida de pasta.
 NOME_JPEG_TALO = re.compile(r'^photo_\d{8}T\d{6}_\d{6}\.jpg$')
@@ -41,15 +43,47 @@ class SensorReadingStore:
             return {'sensors': {name: dict(reading) for name, reading in self._sensors.items()}}
 
 
+class PausaFotos:
+    """Aviso do controlador (222) de que a secagem foi finalizada.
+
+    Cada GET /api/talo do 222 diz se a carga esta concluida (?carga=concluida).
+    A ultima consulta decide; sem consulta ha mais de ``validade_s`` (222 desligado),
+    as fotos voltam, para nao ficar sem fotos se o aviso nao chegar mais.
+    """
+
+    def __init__(self, validade_s=1200):
+        self._lock = threading.Lock()
+        self._concluida = False
+        self._quando = None
+        self.validade_s = validade_s
+
+    def avisar(self, concluida):
+        with self._lock:
+            self._concluida = bool(concluida)
+            self._quando = time.monotonic()
+
+    def ativa(self):
+        with self._lock:
+            return (
+                self._concluida
+                and self._quando is not None
+                and time.monotonic() - self._quando <= self.validade_s
+            )
+
+
 class SensorHTTPServer:
     """Serve as leituras em GET /api/sensors e a última análise do talo em GET /api/talo."""
 
-    def __init__(self, store, host='0.0.0.0', port=8000, talo_path=None):
+    def __init__(self, store, host='0.0.0.0', port=8000, talo_path=None, pausa=None):
         self.store = store
 
         class RequestHandler(BaseHTTPRequestHandler):
             def do_GET(handler_self):
-                if handler_self.path == '/api/talo':
+                partes = urlsplit(handler_self.path)
+                if partes.path == '/api/talo':
+                    if pausa is not None:
+                        concluida = parse_qs(partes.query).get('carga') == ['concluida']
+                        pausa.avisar(concluida)
                     handler_self._send_talo()
                     return
                 if handler_self.path.startswith('/api/talo/foto/'):

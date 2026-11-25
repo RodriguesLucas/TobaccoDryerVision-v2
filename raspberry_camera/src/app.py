@@ -10,7 +10,7 @@ import time
 from zoneinfo import ZoneInfo
 
 from src.camera.photo_worker import capture_photos
-from src.api.sensor_server import SensorHTTPServer, SensorReadingStore
+from src.api.sensor_server import PausaFotos, SensorHTTPServer, SensorReadingStore
 from src.control.hardware import CameraHardware
 from src.storage.sensor_log import append_sensor_log
 from src.talo.analise import pasta_resultados
@@ -68,6 +68,8 @@ def main():
     config = load_configuration(project_root)
     stop_event = threading.Event()
     reading_store = SensorReadingStore()
+    # O 222 avisa em GET /api/talo?carga=concluida; aí as fotos param.
+    pausa = PausaFotos()
     # Os sinais pedem o encerramento; a captura atual termina ou atinge o timeout.
     signal.signal(signal.SIGTERM, lambda *_: stop_event.set())
     signal.signal(signal.SIGINT, lambda *_: stop_event.set())
@@ -86,6 +88,7 @@ def main():
             host=config.get('sensor_api_host', '0.0.0.0'),
             port=config.get('sensor_api_port', 8000),
             talo_path=talo_path,
+            pausa=pausa,
         )
         sensor_server.start()
         print(
@@ -99,7 +102,7 @@ def main():
         )
         sensor_worker.start()
         print('Captura iniciada. Pressione Ctrl+C para encerrar.', flush=True)
-        capture_photos(project_root, config, arguments.simulate, hardware, stop_event, once=arguments.once)
+        capture_photos(project_root, config, arguments.simulate, hardware, stop_event, once=arguments.once, pause=pausa)
     finally:
         stop_event.set()
         try:

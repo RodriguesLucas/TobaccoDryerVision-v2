@@ -8,15 +8,26 @@ import sys
 import time
 
 
-def capture_photos(project_root, config, simulation, hardware, stop_event, photo_queue=None, once=False):
+def capture_photos(project_root, config, simulation, hardware, stop_event, photo_queue=None, once=False, pause=None):
     """Repete iluminação → estabilização → captura → desligamento do LED.
 
     A câmera roda em subprocesso com timeout e o LED é apagado no bloco finally.
+    ``pause`` (PausaFotos): com a secagem finalizada no 222, não fotografa.
     """
     photo_directory = project_root / 'data/photos/simulation' if simulation else Path(config['photo_directory']).expanduser()
     photo_directory.mkdir(parents=True, exist_ok=True)
 
+    pausado = False
     while not stop_event.is_set():
+        if pause is not None and pause.ativa():
+            if not pausado:
+                print('Secagem finalizada no controlador: fotos pausadas até a próxima carga.', flush=True)
+                pausado = True
+            stop_event.wait(30)
+            continue
+        if pausado:
+            print('Carga em andamento no controlador: fotos retomadas.', flush=True)
+            pausado = False
         timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S_%f')
         extension = '.txt' if simulation else '.' + config['photo_format']
         photo_path = photo_directory / ('photo_' + timestamp + extension)
